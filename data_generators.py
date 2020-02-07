@@ -56,8 +56,8 @@ def generate_data(n, background_generator, signal_generator, signal_prob=6.5e-3)
             sample['signal'] = signal
             samples.append(sample)
             i += 1
-            if i % int(n / 10) == 0:
-                print('{}/{} samples completed'.format(i, n))
+            #if i % int(n / 10) == 0:
+             #   print('{}/{} samples completed'.format(i, n))
         else:
             continue
     return pd.DataFrame(samples)
