@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 from pyro import distributions
+from scipy.integrate import quad
 
 E_T_MAX = 200
 E_T_MIN = 0
@@ -18,6 +19,32 @@ def _get_acceptance(E_t, delta_phi, m_jj):
     delta_phi_acceptance = DELTA_PHI_MIN <= delta_phi <= DELTA_PHI_MAX
     m_jj_acceptance = M_JJ_MIN <= m_jj <= M_JJ_MAX
     return all([E_t_acceptance, delta_phi_acceptance, m_jj_acceptance])
+
+
+class CustomDistribution:
+
+    def __init__(self, pdf, x_min, x_max, num_x=10000):
+        self.x = np.linspace(x_min, x_max, num_x)
+        self.pdf = self.normalise_pdf(pdf, x_min, x_max)
+        self.probs = pdf(self.x)
+        if any(self.probs < 0):
+            raise ValueError('Pdf has negative value over support.')
+
+    @staticmethod
+    def normalise_pdf(pdf, x_min, x_max):
+        integral, *_ = quad(pdf, x_min, x_max)
+        return lambda x: (1/integral)*pdf(x)
+
+    def log_prob(self, x):
+        return np.log(self.pdf(x))
+
+    def sample(self):
+        return np.random.choice(self.x, p=self.probs)
+
+
+m = (1.1*np.pi)/(2*np.pi - 1.1)
+c = m*np.pi
+linear_phi_dist = CustomDistribution(pdf=lambda x: m*x + c, x_min=DELTA_PHI_MIN, x_max=DELTA_PHI_MAX)
 
 
 class DataGenerator:
@@ -56,8 +83,6 @@ def generate_data(n, background_generator, signal_generator, signal_prob=6.5e-3)
             sample['signal'] = signal
             samples.append(sample)
             i += 1
-            #if i % int(n / 10) == 0:
-             #   print('{}/{} samples completed'.format(i, n))
         else:
             continue
     return pd.DataFrame(samples)
@@ -67,7 +92,8 @@ class StandardModelBackgroundGenerator(DataGenerator):
 
     def __init__(self):
         transverse_energy_distribution = distributions.Uniform(low=E_T_MIN, high=E_T_MAX)
-        delta_phi_distribution = distributions.Uniform(low=DELTA_PHI_MIN, high=DELTA_PHI_MAX)
+        # delta_phi_distribution = distributions.Uniform(low=DELTA_PHI_MIN, high=DELTA_PHI_MAX)
+        delta_phi_distribution = linear_phi_dist
         m_jj_distribution = distributions.HalfCauchy(120)
         super().__init__(transverse_energy_distribution, delta_phi_distribution, m_jj_distribution)
 
