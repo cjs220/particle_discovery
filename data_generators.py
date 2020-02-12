@@ -94,8 +94,7 @@ class StandardModelBackgroundGenerator(DataGenerator):
 
     def __init__(self):
         transverse_energy_distribution = distributions.Uniform(low=E_T_MIN, high=E_T_MAX)
-        # delta_phi_distribution = distributions.Uniform(low=DELTA_PHI_MIN, high=DELTA_PHI_MAX)
-        delta_phi_distribution = linear_phi_dist
+        delta_phi_distribution = distributions.Uniform(low=DELTA_PHI_MIN, high=DELTA_PHI_MAX)
         m_jj_distribution = distributions.HalfCauchy(120)
         super().__init__(transverse_energy_distribution, delta_phi_distribution, m_jj_distribution)
 
@@ -106,6 +105,16 @@ class StandardModelSignalGenerator(DataGenerator):
     def __init__(self, m_h=125):
         transverse_energy_distribution = distributions.Gamma(15, 0.1)
         delta_phi_distribution = distributions.Uniform(low=DELTA_PHI_MIN, high=DELTA_PHI_MAX)
+        m_jj_distribution = distributions.Normal(m_h, self.width)
+        super().__init__(transverse_energy_distribution, delta_phi_distribution, m_jj_distribution)
+
+
+class BSMSignalGenerator(DataGenerator):
+    width = 2
+
+    def __init__(self, m_h=125):
+        transverse_energy_distribution = distributions.Gamma(15, 0.1)
+        delta_phi_distribution = linear_phi_dist
         m_jj_distribution = distributions.Normal(m_h, self.width)
         super().__init__(transverse_energy_distribution, delta_phi_distribution, m_jj_distribution)
 
