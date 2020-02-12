@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 from pyro import distributions
-from scipy.integrate import quad
 
 E_T_MAX = 200
 E_T_MIN = 0
@@ -24,16 +23,19 @@ def _get_acceptance(E_t, delta_phi, m_jj):
 class CustomDistribution:
 
     def __init__(self, pdf, x_min, x_max, num_x=10000):
-        self.x = np.linspace(x_min, x_max, num_x)
-        self.pdf = self.normalise_pdf(pdf, x_min, x_max)
-        self.probs = pdf(self.x)
+        self.x, step = np.linspace(x_min, x_max, num_x, retstep=True)
+        # self.pdf = self.normalise_pdf(pdf, self.x, step)
+        self.pdf = pdf
+        self.probs = pdf(self.x)*step
+        self.probs /= self.probs.sum()
         if any(self.probs < 0):
             raise ValueError('Pdf has negative value over support.')
 
     @staticmethod
-    def normalise_pdf(pdf, x_min, x_max):
-        integral, *_ = quad(pdf, x_min, x_max)
-        return lambda x: (1/integral)*pdf(x)
+    def normalise_pdf(pdf, x, step):
+        # TODO: fix this
+        integral = (pdf(x)*step).sum()
+        return lambda y: (1/integral)*pdf(y)
 
     def log_prob(self, x):
         return np.log(self.pdf(x))
@@ -109,9 +111,12 @@ class StandardModelSignalGenerator(DataGenerator):
 
 
 if __name__ == '__main__':
-    s = StandardModelSignalGenerator()
-    b = StandardModelBackgroundGenerator()
-    df = generate_data(n=int(1e6), background_generator=b, signal_generator=s)
-    df['m_jj'].round().value_counts().reset_index().rename(columns={'index': 'm_jj', 'm_jj': 'count'}).plot.scatter(
-        x='m_jj', y='count', xlim=[1.1*M_JJ_MIN, 0.9*M_JJ_MAX])
-    plt.show()
+    sm_background = StandardModelBackgroundGenerator()
+    sm_signal = StandardModelSignalGenerator()
+
+    n_data_sim = int(1e6)
+
+    h_0_simulated_data = generate_data(n=n_data_sim, background_generator=sm_background, signal_generator=sm_signal,
+                                       signal_prob=0)
+    h_1_simulated_data = generate_data(n=n_data_sim, background_generator=sm_background, signal_generator=sm_signal)
+    h_1_simulated_data.head()
